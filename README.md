@@ -1,121 +1,99 @@
-# 擴散模型在視訊生成與具身智能訓練中的應用
+---
+pipeline_tag: image-to-video
+license: other
+license_name: stable-video-diffusion-community
+license_link: LICENSE.md
+---
 
-本項目展示了如何利用開源的**Stable Video Diffusion (SVD)**模型建立一個完整的視訊生成流程，並在此基礎上對模型進行微調，最終生成可供具身智能在虛擬環境中學習的視訊樣本。由於真實機器人的訓練成本高昂，透過虛擬環境訓練是一條現實可行的路徑，而利用擴散模型生成合理且具有一致性的視訊則是其中的關鍵技術之一。
+# Stable Video Diffusion Image-to-Video Model Card
 
-## 項目概述
+<!-- Provide a quick summary of what the model is/does. -->
+![row01](output_tile.gif)
+Stable Video Diffusion (SVD) Image-to-Video is a diffusion model that takes in a still image as a conditioning frame, and generates a video from it. 
 
-Stable Video Diffusion 是 Stability AI 發佈的首個開源影像到視訊生成模型，它在高分辨率短視訊生成任務上達到領先水平【828584066261707†L120-L136】。SVD 模型在訓練時先進行影像模型預訓練，再將影像模型擴展為視訊模型並在大型視訊資料集上預訓練，最後在小型高品質視訊資料集上微調【432658925811640†L103-L133】。本專案採用 Hugging Face Diffusers 中的 `StableVideoDiffusionPipeline` 作為基礎，並提供以下功能：
+Please note: For commercial use, please refer to https://stability.ai/license.
 
-* **資料準備**：將任意影片分解為逐幀影像，並按照每個影片一個目錄的結構保存。SVD 訓練程式要求資料採用如下層級結構：根目錄下每個資料夾代表一部影片，子資料夾內是影片的連續畫格【861566361391680†L288-L301】。
-* **模型微調**：提供一個簡化的訓練腳本，可在自定義資料集上微調 Stable Video Diffusion 模型。腳本會固定變分自編碼器(VAE)與 CLIP 圖像編碼器的權重，只更新 UNet 中的時序層。用戶可調整訓練步數、學習率、影格數和解析度等超參數。
-* **推理示例**：提供推理腳本，讀取微調後的模型，根據輸入圖像生成短視訊。示例包含如何使用 `StableVideoDiffusionPipeline` 載入模型、推送圖像到裝置、設定隨機種子以及輸出 mp4 檔案【828584066261707†L120-L136】。
+## Model Details
 
-## 環境搭建
+### Model Description
 
-1. 安裝 Python 3.9 或更新版本。
-2. 建立虛擬環境並安裝依賴：
+(SVD) Image-to-Video is a latent diffusion model trained to generate short video clips from an image conditioning. 
+This model was trained to generate 25 frames at resolution 576x1024 given a context frame of the same size, finetuned from [SVD Image-to-Video [14 frames]](https://huggingface.co/stabilityai/stable-video-diffusion-img2vid).
+We also finetune the widely used [f8-decoder](https://huggingface.co/docs/diffusers/api/models/autoencoderkl#loading-from-the-original-format) for temporal consistency. 
+For convenience, we additionally provide the model with the 
+standard frame-wise decoder [here](https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/blob/main/svd_xt_image_decoder.safetensors).
 
-   ```bash
-   cd project
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
 
-   `requirements.txt` 列出了 diffusers、transformers、accelerate、torch、opencv-python 等必需的套件。
+- **Developed by:** Stability AI
+- **Funded by:** Stability AI
+- **Model type:** Generative image-to-video model
+- **Finetuned from model:** SVD Image-to-Video [14 frames]
 
-3. **下載預訓練模型**：首次使用時，程式會自動從 Hugging Face 下載 `stabilityai/stable-video-diffusion-img2vid-xt` 模型權重。使用前需要登錄 Hugging Face 並接受模型授權。
+### Model Sources
 
-## 資料準備
+For research purposes, we recommend our `generative-models` Github repository (https://github.com/Stability-AI/generative-models), 
+which implements the most popular diffusion frameworks (both training and inference).
 
-訓練腳本假定資料目錄具有以下層級結構【861566361391680†L288-L301】：
+- **Repository:** https://github.com/Stability-AI/generative-models
+- **Paper:** https://stability.ai/research/stable-video-diffusion-scaling-latent-video-diffusion-models-to-large-datasets
 
-```text
-dataset_root/
-  ├── video_0001/
-  │     ├── 00000.png
-  │     ├── 00001.png
-  │     └── ...
-  ├── video_0002/
-  │     ├── 00000.png
-  │     ├── 00001.png
-  │     └── ...
-  └── ...
-```
 
-您可以使用 `prepare_dataset.py` 將一組 MP4 影片自動轉換為上述格式。該腳本會遍歷源目錄中的所有影片，為每個影片建立一個資料夾，然後用 OpenCV 逐幀解碼，並按照固定格式保存影像。對於較大的資料集（如 BDD100K），需要事先註冊並手動下載原始檔案【698951853997309†L911-L918】。請注意，完整的 BDD100K 包含 100 k 個長度 40 秒、720p 解析度的影片【698951853997309†L911-L918】；作為示範，選取其中少量影片或使用其他輕量資料集即可。
+## Evaluation
+![comparison](comparison.png)
+The chart above evaluates user preference for SVD-Image-to-Video over [GEN-2](https://research.runwayml.com/gen2) and [PikaLabs](https://www.pika.art/).
+SVD-Image-to-Video is preferred by human voters in terms of video quality. For details on the user study, we refer to the [research paper](https://stability.ai/research/stable-video-diffusion-scaling-latent-video-diffusion-models-to-large-datasets)
 
-運行示例：
+## Uses
 
-```bash
-# 假設源影片存放在 ./videos 目錄，輸出資料集保存到 ./dataset
-python prepare_dataset.py \
-    --video_dir ./videos \
-    --output_dir ./dataset \
-    --max_frames 25
-```
+### Direct Use
 
-參數說明：
+The model is intended for both non-commercial and commercial usage. You can use this model for non-commercial or research purposes under this [license](https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/blob/main/LICENSE.md). Possible research areas and tasks include
 
-* `--video_dir`：包含 MP4 或其他常見格式影片的資料夾。
-* `--output_dir`：輸出資料集根目錄，每個影片會生成一個子資料夾。
-* `--max_frames`：可選，限制每個影片提取的最大影格數。若省略則提取影片全部影格。
+- Research on generative models.
+- Safe deployment of models which have the potential to generate harmful content.
+- Probing and understanding the limitations and biases of generative models.
+- Generation of artworks and use in design and other artistic processes.
+- Applications in educational or creative tools.
 
-## 模型微調
+For commercial use, please refer to https://stability.ai/license.
 
-本項目提供的 `train_svd.py` 採用了 Hugging Face Diffusers 庫中的 `StableVideoDiffusionPipeline` 對模型進行微調。其核心步驟包括：
+Excluded uses are described below.
 
-1. **載入預訓練模型**：從 Hugging Face 下載 `stabilityai/stable-video-diffusion-img2vid-xt` 檢查點。
-2. **凍結部分權重**：為了降低顯存開銷，訓練過程中僅更新 UNet 中的時序層，其餘包括 VAE 和 CLIP 圖像編碼器均保持凍結。
-3. **資料載入與處理**：自定義資料集類會從資料目錄中隨機選取一段連續影格，將其縮放到預定解析度，並將像素值歸一化到 [-1, 1]。
-4. **前向推理與損失計算**：
-   * 使用 VAE 將影格編碼到潛在空間；對潛在向量添加隨機噪聲並隨機抽樣時間步。
-   * 用 CLIP 圖像編碼器計算第一張影格的圖像嵌入，作為條件。
-   * UNet 接受噪聲潛在表示、時間步和圖像嵌入，預測原始噪聲；損失函數為預測噪聲與真實噪聲的均方誤差(MSE)。
-5. **優化器與學習率策略**：使用 AdamW 優化器，學習率及其它超參數可通過命令列指定；支援梯度累積與半精度訓練以節省記憶體。
+### Out-of-Scope Use
 
-訓練命令範例（在單卡 GPU 上進行微調）：
+The model was not trained to be factual or true representations of people or events, 
+and therefore using the model to generate such content is out-of-scope for the abilities of this model.
+The model should not be used in any way that violates Stability AI's [Acceptable Use Policy](https://stability.ai/use-policy).
 
-```bash
-python train_svd.py \
-    --pretrained_model_name stabilityai/stable-video-diffusion-img2vid-xt \
-    --dataset_dir ./dataset \
-    --output_dir ./outputs \
-    --train_batch_size 1 \
-    --max_train_steps 5000 \
-    --learning_rate 1e-5 \
-    --num_frames 25 \
-    --width 512 \
-    --height 320 
-```
+## Limitations and Bias
 
-在上述訓練配置中，我們使用了與 SVD Xtend 示例相近的輸入解析度(512 × 320)、批次大小為 1、學習率 1e-5 等。更多參數說明可參考 `train_svd.py` 文件。原始 SVD Xtend 說明中提供了細節：可在 BDD100K 資料集上啟動訓練並指定每 1000 步保存檢查點等【861566361391680†L302-L317】。
+### Limitations
+- The generated videos are rather short (<= 4sec), and the model does not achieve perfect photorealism.
+- The model may generate videos without motion, or very slow camera pans.
+- The model cannot be controlled through text.
+- The model cannot render legible text.
+- Faces and people in general may not be generated properly.
+- The autoencoding part of the model is lossy.
 
-## 推理與視訊生成
 
-微調完成後，使用 `infer_svd.py` 可根據任意輸入圖像生成短視訊。推理腳本會載入您訓練的模型目錄，處理輸入圖像，然後輸出 mp4 檔案。示例：
+### Recommendations
 
-```bash
-python infer_svd.py \
-    --model_dir ./outputs \
-    --input_image path/to/your/image.jpg \
-    --output_video ./sample_output.mp4 \
-    --motion_bucket_id 180 \
-    --noise_aug_strength 0.1 \
-    --fps 7
-```
+The model is intended for both non-commercial and commercial usage.
 
-其中：
+## How to Get Started with the Model
 
-* `--motion_bucket_id`：控制運動幅度，值越大代表視訊中物體運動越顯著【828584066261707†L184-L220】。
-* `--noise_aug_strength`：在推理時對輸入圖像加入噪聲以增加多樣性，較大的值使生成結果與原圖更不相似【828584066261707†L188-L193】。
-* `--fps`：輸出的影片幀率。
+Check out https://github.com/Stability-AI/generative-models
 
-## 說明與致謝
+# Appendix: 
 
-* 本專案使用的模型與訓練框架基於 Hugging Face Diffusers 庫與 Stable Video Diffusion 模型卡。
-* 部分程式邏輯參考了 SVD Xtend 專案的訓練流程和資料組織方式【861566361391680†L288-L301】【861566361391680†L302-L317】。
-* 視訊資料集 BDD100K 包含 100 k 個涵蓋多個城市和不同天氣條件的駕駛場景影片，並提供標註信息【698951853997309†L911-L918】。在真實研究中，建議使用經過授權的數據集並遵守其使用條款。
-
-透過上述代碼與說明，您可以複製一個完整的擴散模型視訊生成項目，並在個人 GPU 上完成資料預處理、模型微調與推理工作。
+All considered potential data sources were included for final training, with none held out as the proposed data filtering methods described in the SVD paper handle the quality control/filtering of the dataset. With regards to safety/NSFW filtering, sources considered were either deemed safe or filtered with the in-house NSFW filters.
+No explicit human labor is involved in training data preparation. However, human evaluation for model outputs and quality was extensively used to evaluate model quality and performance. The evaluations were performed with third-party contractor platforms (Amazon Sagemaker, Amazon Mechanical Turk, Prolific) with fluent English-speaking contractors from various countries, primarily from the USA, UK, and Canada. Each worker was paid $12/hr for the time invested in the evaluation.
+No other third party was involved in the development of this model; the model was fully developed in-house at Stability AI.
+Training the SVD checkpoints required a total of approximately 200,000 A100 80GB hours. The majority of the training occurred on 48 * 8 A100s, while some stages took more/less than that. The resulting CO2 emission is ~19,000kg CO2 eq., and energy consumed is ~64000 kWh.
+The released checkpoints (SVD/SVD-XT) are image-to-video models that generate short videos/animations closely following the given input image. Since the model relies on an existing supplied image, the potential risks of disclosing specific material or novel unsafe content are minimal. This was also evaluated by third-party independent red-teaming services, which agree with our conclusion to a high degree of confidence (>90% in various areas of safety red-teaming). The external evaluations were also performed for trustworthiness, leading to >95% confidence in real, trustworthy videos.
+With the default settings at the time of release, SVD takes ~100s for generation, and SVD-XT takes ~180s on an A100 80GB card. Several optimizations to trade off quality / memory / speed can be done to perform faster inference or inference on lower VRAM cards.
+The information related to the model and its development process and usage protocols can be found in the GitHub repo, associated research paper, and HuggingFace model page/cards. 
+The released model inference & demo code has image-level watermarking enabled by default, which can be used to detect the outputs. This is done via the imWatermark Python library.  
+The model can be used to generate videos from static initial images. However, we prohibit unlawful, obscene, or misleading uses of the model consistent with the terms of our license and Acceptable Use Policy. For the open-weights release, our training data filtering mitigations alleviate this risk to some extent. These restrictions are explicitly enforced on user-facing interfaces at stablevideo.com, where a warning is issued. We do not take any responsibility for third-party interfaces. Submitting initial images that bypass input filters to tease out offensive or inappropriate content listed above is also prohibited. Safety filtering checks at stablevideo.com run on model inputs and outputs independently. More details on our user-facing interfaces can be found here: https://www.stablevideo.com/faq. Beyond the Acceptable Use Policy and other mitigations and conditions described here, the model is not subject to additional model behavior interventions of the type described in the Foundation Model Transparency Index.
+For stablevideo.com, we store preference data in the form of upvotes/downvotes on user-generated videos, and we have a pairwise ranker that runs while a user generates videos. This usage data is solely used for improving Stability AI’s future image/video models and services. No other third-party entities are given access to the usage data beyond Stability AI and maintainers of stablevideo.com. 
+For usage statistics of SVD, we refer interested users to HuggingFace model download/usage statistics as a primary indicator. Third-party applications also have reported model usage statistics. We might also consider releasing aggregate usage statistics of stablevideo.com on reaching some milestones.
